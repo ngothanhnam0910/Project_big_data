@@ -2,7 +2,8 @@
 
 ## Bước 1:
 - Clone repo từ github về từ nhánh master
-- Yêu cầu: đã có anaconda trên máy (chưa có thì cài đặt về máy local)
+- Yêu cầu: đã có anaconda trên máy (chưa có thì cài đặt về máy local) và có docker, docker-compose
+
 ## Bước 2:
 - Checkout ra 1 nhánh riêng : git checkout branch_name
 - Tạo 1 môi trường mới và install thư viện : pip install -r requirement.txt
