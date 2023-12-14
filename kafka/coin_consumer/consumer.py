@@ -20,11 +20,11 @@ class CoinConsumer:
         self.logger = logging.getLogger('coin_consumer')
         self.consumer = KafkaConsumer(
             'coinTradeData',
-            bootstrap_servers=['localhost:19092', 'localhost:29092', 'localhost:39092'],
+            bootstrap_servers=['127.0.0.1:9092','127.0.0.1:9093','127.0.0.1:9094'],
             group_id='tradeDataConsummers',
             auto_offset_reset='earliest',
             enable_auto_commit=False)
-        self.hdfs_client = InsecureClient('http://localhost:9870', user='root')
+        self.hdfs_client = InsecureClient('127.0.0.1:9870', user='root')
 
     def flush_to_hdfs(self, tmp_file_name):
         current_time = datetime.datetime.now()
@@ -33,12 +33,14 @@ class CoinConsumer:
             str(current_time.month) + "/" +\
             str(current_time.day) + "/"\
             f"coinTradeData.{int(round(current_time.timestamp()))}"
-
+        print("hdfs_filename: ",hdfs_filename)
+        print("tmp_file_name: ",tmp_file_name)
         self.logger.info(
             f"Starting flush file {tmp_file_name} to hdfs")
         flush_status = self.hdfs_client.upload(hdfs_filename, tmp_file_name)
         if flush_status:
             self.logger.info(f"Flush file {tmp_file_name} to hdfs as {hdfs_filename} successfully")
+            print(f"Flush file {tmp_file_name} to hdfs as {hdfs_filename} successfully")
         else:
             raise RuntimeError(f"Failed to flush file {tmp_file_name} to hdfs")
         self.consumer.commit()
@@ -52,8 +54,10 @@ class CoinConsumer:
         try:
             tmp_file = self.recreate_tmpfile()
             self.logger.info("Subcribe to topic coinTradeData")
+            print(f"Nhay vao ham run roi")
             while True:
                 msgs_pack = self.consumer.poll(10.0)
+                # print(f"msgs_pack: {msgs_pack}")
                 if msgs_pack is None:
                     continue
 
@@ -61,15 +65,19 @@ class CoinConsumer:
                     for message in messages:
                         true_msg = str(message[6])[2: len(str(message[6])) - 1]
                         tmp_file.write(f"{true_msg}\n")
+                        print(f"write succes {true_msg}")
 
                 # File size > 10mb flush to hdfs
-                if tmp_file.tell() > 10485760:
+                if tmp_file.tell() > 10485760 // 2:
+                    print(f"Start flush to hdfs")
                     self.flush_to_hdfs(tmp_file.name)
+                    print(f"Push to hdfs sucessful !")
                     tmp_file.close()
                     tmp_file = self.recreate_tmpfile()
         except Exception as e:
             self.logger.error(
                 f"An error happened while processing messages from kafka: {e}")
+            print(f"error: {e}")
         finally:
             tmp_file.close()
             self.consumer.close()
