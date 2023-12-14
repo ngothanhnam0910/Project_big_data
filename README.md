@@ -10,8 +10,7 @@
 ## Bước 3:
 - Step1: docker-compose up -d  (run cụm kafka)
 - Step2: Mở 1 terminal mới và chạy lệnh:  
-        - cd hadoop 
-        - docker-compose up -d (khởi động cụm hadoop)
+        - cd hadoop và docker-compose up -d (khởi động cụm hadoop)
 ## Bước 4:
 - python kafka/coin_producer/app.py: để đẩy message từ producer vào kafka broker
 - python kafka/coin_consumer/app.py: push dữ liệu từ broker tới consumer(hdfs)
