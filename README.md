@@ -10,8 +10,8 @@
 - Checkout ra 1 nhánh riêng : git checkout branch_name
 - Tạo 1 môi trường mới
     - conda create --name mt_name python=3.7
-    - pip install -r requirement.txt
     - conda activate mt_name
+    - pip install -r requirement.txt
 ## Bước 3:
 - Để khởi tạo cụm kafka: docker-compose up -d
 - Để khởi tạo cụm hadoop: 
