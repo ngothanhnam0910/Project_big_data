@@ -2,16 +2,25 @@
 
 ## Bước 1:
 - Clone repo từ github về từ nhánh master
-- Yêu cầu: đã có anaconda trên máy (chưa có thì cài đặt về máy local) và có docker, docker-compose
+- Yều cầu: 
+    - Đã có anaconda để tạo môi trường
+    - Đã có docker và docker-compose (cài docker-destop để dễ quản lý log)
 
 ## Bước 2:
 - Checkout ra 1 nhánh riêng : git checkout branch_name
-- Tạo 1 môi trường mới và install thư viện : pip install -r requirement.txt
-- Sau đó activate vào môi trường 
+- Tạo 1 môi trường mới
+    - conda create --name mt_name python=3.7
+    - conda activate mt_name
+    - pip install -r requirement.txt
 ## Bước 3:
-- Step1: docker-compose up -d  (run cụm kafka)
-- Step2: Mở 1 terminal mới và chạy lệnh:  
-        - cd hadoop và docker-compose up -d (khởi động cụm hadoop)
+- Để khởi tạo cụm kafka: docker-compose up -d
+- Để khởi tạo cụm hadoop: 
+    - cd hadoop
+    - docker network create hadoop_network
+    - docker build -t hadoop-base:3.3.1 -f Dockerfile .
+    - docker-compose -f docker-compose-hadoop.yml up -d
+
 ## Bước 4:
-- python kafka/coin_producer/app.py: để đẩy message từ producer vào kafka broker
-- python kafka/coin_consumer/app.py: push dữ liệu từ broker tới consumer(hdfs)
+- Để crawl dữ liệu coin:
+    - python kafka/coin_producer/app.py: để đẩy message từ producer vào kafka broker
+    - python kafka/coin_consumer/app.py: Lưu file về local file (đặt ten theo thoi gian tao file)
