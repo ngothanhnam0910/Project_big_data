@@ -9,9 +9,9 @@ api_key_secret = "YITaLPgOQwC5mX6GKstCeNhzWUaEoRIh1a8DpKzltef5ja9qkz"
 access_token = "1734205566950735872-SvTXJ68oHWA22mXFuL4WTY0x13vA6J"
 token_secret = "UYUIxTY4W3EHcyCxoDUoaWXcKimqQ68a3pKiAxQI2Y0XQ"
 
-bearer_token = "AAAAAAAAAAAAAAAAAAAAADTHrQEAAAAA6%2F%2FEi3lvtGGgjMX2mH1kCPIpfYc%3Dc1jWfKMYFPuoSj9bCoFMEe072rmUH5BwLjdChXif3sQ1oztEuL"
+bearer_token = "AAAAAAAAAAAAAAAAAAAAADTHrQEAAAAAnJ60T5XuEE%2BXsixexCdZZQsuEiY%3DNzXShIpHnJgUFe4AjajYoKkz5SvHWVMkeixOnCJ6mXFOv4osvi"
 def run_service():
-    producer = TwitterProducer(bearer_token = token_secret, return_type=dict)
+    producer = TwitterProducer(bearer_token = bearer_token, return_type=dict)
     print(f"After create producer")
     producer.run()
 

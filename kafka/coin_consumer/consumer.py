@@ -1,11 +1,11 @@
 import logging
 import os
 import tempfile
-import datetime
+from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from kafka import KafkaConsumer
 from hdfs import InsecureClient
-
+# import pydoop.hdfs as hdfs
 
 class CoinConsumer:
     def __init__(self):
@@ -24,60 +24,48 @@ class CoinConsumer:
             group_id='tradeDataConsummers',
             auto_offset_reset='earliest',
             enable_auto_commit=False)
-        self.hdfs_client = InsecureClient('127.0.0.1:9870', user='root')
+        # self.hdfs_client = InsecureClient('127.0.0.1:9870', user='root')
 
-    def flush_to_hdfs(self, tmp_file_name):
-        current_time = datetime.datetime.now()
-        hdfs_filename = "/coinTradeData/" +\
-            str(current_time.year) + "/" +\
-            str(current_time.month) + "/" +\
-            str(current_time.day) + "/"\
-            f"coinTradeData.{int(round(current_time.timestamp()))}"
-        print("hdfs_filename: ",hdfs_filename)
-        print("tmp_file_name: ",tmp_file_name)
-        self.logger.info(
-            f"Starting flush file {tmp_file_name} to hdfs")
-        flush_status = self.hdfs_client.upload(hdfs_filename, tmp_file_name)
-        if flush_status:
-            self.logger.info(f"Flush file {tmp_file_name} to hdfs as {hdfs_filename} successfully")
-            print(f"Flush file {tmp_file_name} to hdfs as {hdfs_filename} successfully")
-        else:
-            raise RuntimeError(f"Failed to flush file {tmp_file_name} to hdfs")
-        self.consumer.commit()
+    def create_file_name(self):
+        now = datetime.now()
+        file_name = f"coinTradeData_{now.strftime('%Y-%m-%d_%H-%M-%S')}.txt"
 
-    def recreate_tmpfile(self):
-        tmp_file = tempfile.NamedTemporaryFile(mode='w+t')
-        tmp_file.write('Symbol,Price,Quantity,Trade time\n')
-        return tmp_file
+        return f"hadoop/data/coin/{file_name}"
+
+    def write_to_txt(self, data, file_name):
+        #file_name = f"hadoop/data/coin/{file_name}"
+        with open(file_name, mode='a') as file:
+            file.write(data)
 
     def run(self):
         try:
-            tmp_file = self.recreate_tmpfile()
             self.logger.info("Subcribe to topic coinTradeData")
-            print(f"Nhay vao ham run roi")
+            file_name = self.create_file_name()
+            # print(file_name)
+            # exit()
             while True:
                 msgs_pack = self.consumer.poll(10.0)
-                # print(f"msgs_pack: {msgs_pack}")
                 if msgs_pack is None:
-                    continue
-
+                    continue                
+                
                 for tp, messages in msgs_pack.items():
                     for message in messages:
                         true_msg = str(message[6])[2: len(str(message[6])) - 1]
-                        tmp_file.write(f"{true_msg}\n")
-                        print(f"write succes {true_msg}")
 
-                # File size > 10mb flush to hdfs
-                if tmp_file.tell() > 10485760 // 2:
-                    print(f"Start flush to hdfs")
-                    self.flush_to_hdfs(tmp_file.name)
-                    print(f"Push to hdfs sucessful !")
-                    tmp_file.close()
-                    tmp_file = self.recreate_tmpfile()
+                        # write to file
+                        self.write_to_txt(f"{true_msg}\n", file_name)
+                        
+                        # check size of file
+                        file_size = os.path.getsize(file_name) if os.path.exists(file_name) else 0
+                        print(f"file_size: {file_size}")
+                        if file_size >= 1024 * 1024 * 512 : # size > 512 MB
+                            file_name = self.create_file_name() 
+                        print(f"write succes {true_msg}")
+                        
         except Exception as e:
             self.logger.error(
                 f"An error happened while processing messages from kafka: {e}")
             print(f"error: {e}")
         finally:
-            tmp_file.close()
+            # tmp_file.close()
             self.consumer.close()
