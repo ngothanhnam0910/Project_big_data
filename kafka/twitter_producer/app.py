@@ -1,22 +1,18 @@
 from producer import TwitterProducer
-import os
+from kafka import KafkaAdminClient
+from kafka.admin import NewTopic
 
-# with open(f"{os.path.abspath(os.getcwd())}/kafka/twitter_producer/secret", "r") as file:
-#     bearer_token = file.readline().split(' ')[2].split('\n')[0]
-
-api_key = "MuRAjvVic6MpFNLPGJK7o67hy"
-api_key_secret = "YITaLPgOQwC5mX6GKstCeNhzWUaEoRIh1a8DpKzltef5ja9qkz"
-access_token = "1734205566950735872-SvTXJ68oHWA22mXFuL4WTY0x13vA6J"
-token_secret = "UYUIxTY4W3EHcyCxoDUoaWXcKimqQ68a3pKiAxQI2Y0XQ"
-
-bearer_token = "AAAAAAAAAAAAAAAAAAAAADTHrQEAAAAAnJ60T5XuEE%2BXsixexCdZZQsuEiY%3DNzXShIpHnJgUFe4AjajYoKkz5SvHWVMkeixOnCJ6mXFOv4osvi"
 def run_service():
-    producer = TwitterProducer(bearer_token = bearer_token, return_type=dict)
+    # # Create topic, just run 1 time
+    # kafka_admin_client = KafkaAdminClient(bootstrap_servers=['127.0.0.1:9092', '127.0.0.1:9093', '127.0.0.1:9094'])
+    # topics = kafka_admin_client.list_topics()
+    # if 'twitterData' not in topics:
+    #     topic = NewTopic(name='twitterData', num_partitions=3, replication_factor=1)
+    #     kafka_admin_client.create_topics(new_topics=[topic], validate_only=False)
+
+    producer = TwitterProducer()
     print(f"After create producer")
     producer.run()
-
-
-
 
 if __name__ == "__main__":
     print("------Start----- ")
