@@ -51,8 +51,12 @@ class TwitterConsumer:
     #     tmp_file.write('Symbol,Tweet,Recorded time\n')
     #     return tmp_file
     def recreate_tmpfile(self):
-        tmp_file = open(f"{os.path.dirname(os.path.realpath(__file__))}/data.csv", "w+")
-        tmp_file.write('Symbol,Tweet,Recorded time\n')
+        file_path = f"{os.path.dirname(os.path.realpath(__file__))}/new_data.csv"
+        if not os.path.isfile(file_path):
+            tmp_file = open(file_path, "w+")
+            tmp_file.write('Symbol,Tweet,Recorded time\n')
+        else:
+            tmp_file = open(file_path, "a+")
         return tmp_file
 
     def run(self):
@@ -67,10 +71,7 @@ class TwitterConsumer:
                 for tp, messages in msgs_pack.items():
                     for message in messages:
                         true_msg = str(message[6])[2: len(str(message[6])) - 1]
-                        # IMPORTANT: Only add timestamp here because it is too late.
-                        # It need to be put in producer
-                        current_timestamp = int(round(datetime.datetime.now().timestamp()))
-                        tmp_file.write(f"{true_msg},\"{current_timestamp}\"\n")
+                        tmp_file.write(f"{true_msg}\n")
 
                 # # File size > 1mb flush to hdfs
                 # if tmp_file.tell() > 1048576:

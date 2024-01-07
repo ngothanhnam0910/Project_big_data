@@ -1,14 +1,23 @@
 import logging
+import os
+import pandas as pd
+import time
+import pytz
 from logging.handlers import RotatingFileHandler
 from kafka import KafkaProducer
 from kafka.errors import KafkaError
-import os
-import pandas as pd
 from ntscraper import Nitter
+from datetime import datetime
 
-coins_df = pd.read_csv('coin_list.csv')
-coins_df['keywords'] = coins_df['keywords'].apply(lambda x: x.split(',') if isinstance(x, str) else [])
-coin_codes = coins_df.set_index('coin_codes')['keywords'].to_dict()
+def convert_date_to_timestamp(date_str):
+    date_format = "%b %d, %Y · %I:%M %p %Z"
+    date = datetime.strptime(date_str, date_format)
+    date = date.replace(tzinfo=pytz.UTC)
+    timestamp = date.timestamp()
+    return timestamp
+
+coins_df = pd.read_csv('symbol_list.csv', header=None)
+coin_codes = coins_df[0].tolist()
 
 class TwitterProducer:
     def __init__(self):
@@ -29,18 +38,21 @@ class TwitterProducer:
             api_version=(0, 11, 5),
             client_id='twitter_producer')
 
-        self.scraper = Nitter(0)
+        self.scraper = None
 
     def run(self):
         try:
             print("Nhay vao ham run roi")
             self.logger.info("Start running twitter producer...")
 
+            self.scraper = Nitter(0)
+
             while True:
                 try:
-                    tweets = self.scraper.get_tweets("coin", mode='hashtag', number=300)
+                    tweets = self.scraper.get_tweets("coin", mode='hashtag', number=99)
                 except Exception as e:
                     self.logger.error(f"Fetching error: {e}")
+                    time.sleep(300)
                     continue
 
                 final_tweets = []
@@ -49,29 +61,41 @@ class TwitterProducer:
                     final_tweets.append(data)
 
                 dat = pd.DataFrame(final_tweets, columns=['link', 'text', 'date'])
-                coin_mentions = pd.DataFrame()
+                dat['date'] = dat['date'].apply(convert_date_to_timestamp)
 
-                for coin, variants in coin_codes.items():
-                    coin_mentions[coin] = dat['text'].str.contains('|'.join(variants), case=False)
+                for coin in coin_codes:
+                    dat[coin] = dat['text'].str.contains(coin, case=False)
 
-                dat['coin_code'] = coin_mentions.apply(lambda row: [coin for coin in coin_codes if row[coin]], axis=1)
+                dat['coin_code'] = dat.apply(lambda row: [coin for coin in coin_codes if row[coin]], axis=1)
                 dat = dat.drop(columns=['link'])
                 dat = dat[['coin_code', 'text', 'date']]
 
                 for index, row in dat.iterrows():
+                    if not row['coin_code']:
+                        continue
                     for coin_code in row['coin_code']:
                         tweet_info = f"\"{coin_code}\",\"{row['text']}\",\"{row['date']}\""
                         try:
-                            print(tweet_info)
+                            # print(tweet_info)
                             self.producer.send('twitterData', bytes(tweet_info, encoding='utf-8'))
+                            print("Successful")
                             self.producer.flush()
                         except Exception as e:
                             self.logger.error(f"An error happened while pushing message to Kafka: {e}")
                             continue
 
+                del tweets
+                del final_tweets
+                del dat
+                time.sleep(60)
+
         except KafkaError as e:
             self.logger.error(f"An Kafka error happened: {e}")
         except Exception as e:
             self.logger.error(f"An error happened while running the producer: {e}")
+            print("After get bug, time sleep")
+            time.sleep(300)
+            print("Start again")
+            self.run()
         finally:
             self.producer.close()

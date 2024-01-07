@@ -1,0 +1,22 @@
+Bước 1:
+pip install -r requirement.txt (đã bổ sung 1 số thư viện)
+
+Bước 2:
+docker-compose up -d
+
+Bước 3:
+chạy kafka/twitter_producer/check_topic.py
+(có timesleep để tránh lỗi khi kafka broker chưa sẵn sàng,
+nếu có lỗi thì chạy lại file này)
+
+Bước 4:
+chạy song song kafka/twitter_producer/app.py
+và kafka/twitter_consumer/app.py
+
+nếu có lỗi liên quan đến file log thì
+ở twitter_producer tạo file logs/producer.log
+ở twitter_consumer tạo file logs/consumer.log
+
+Bước 5: (tắt chương trình)
+tắt 2 file app.py đang chạy
+docker-compose down -v
