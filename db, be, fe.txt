@@ -1,4 +1,5 @@
 Note: Tên symbol: viết hoa. Code backend, frontend viết theo model trong cassandra/create_model.py
+recorded_time symbol và recorded_time tweet trùng nhau
 ---------------------------------------------------
 1. Cài đặt môi trường
 Cài Java bản SE Runtime Environment 8u251
