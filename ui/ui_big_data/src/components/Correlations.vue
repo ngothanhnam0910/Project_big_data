@@ -1,33 +1,52 @@
 <script setup>
-import {Row, Col, Card, Button, Input} from 'ant-design-vue';
-import {
-    UserOutlined, MenuFoldOutlined, MenuUnfoldOutlined
-    
-} from '@ant-design/icons-vue';
-</script>
+import {Row, Col, Card, Button, Input, Skeleton} from 'ant-design-vue';
+import CanvasJS from '@canvasjs/stockcharts';
+import axios from 'axios';
+import { ref } from 'vue';
 
-<template>
-  <div style="display: flex; flex-direction: row; align-items: center; justify-content: end; margin-bottom: 25px;">
-    <Input type="text" v-model="this.pair" placeholder="Search" style="width: 200px; margin-right: 10px;"></Input>
-    <Button>Submit</Button>
-  </div>
-  <CanvasJSStockChart :options="this.options" :style="this.styleOptions" />
-</template>
+let isLoading = ref(true);
+let frequency = 'minute';
+let symbol = 'SNS';
+var dps1 = [], dps2 = [], dps3 = [];
 
-<script>
-  import btcData from "../assets/btcusd2018.json";
-  import CanvasJS from '@canvasjs/stockcharts';
-  export default {
-    data() {
-      var dps1 = [], dps2 = [], dps3 = [];
-      btcData.forEach(data => {
-        dps1.push({ x: new Date(data["date"]), y: [data["open"], data["high"], data["low"], data["close"]] });
-        dps2.push({ x: new Date(data["date"]), y: data["volume_usd"] });
-        dps3.push({ x: new Date(data["date"]), y: data["close"] });
+
+
+axios.get(`http://localhost:5000/get_symbol_correlation/${symbol}?frequency=${frequency}`)
+    .then(response => {
+      response.data.symbol_correlation.forEach(data => {
+        dps1.push({ x: new Date(data["recorded_time"]), y: [data["open"], data["high"], data["low"], data["close"]] });
+        dps2.push({ x: new Date(data["recorded_time"]), y: data["tweet_count"] });
       });
-      return {
-        chart: null,
-        options: {
+
+      isLoading.value = false
+    })
+
+
+let getChart = async(pair) => {
+  console.log(pair.toUpperCase());
+  isLoading.value = true;
+  await axios.get(`http://localhost:5000/get_symbol_correlation/${pair.toUpperCase()}?frequency=${frequency}`)
+    .then(response => {
+      console.log(response.data);
+      dps1 = []; dps2 = [];
+      response.data.symbol_correlation.forEach(data => {
+        dps1.push({ x: new Date(data["recorded_time"]), y: [data["open"], data["high"], data["low"], data["close"]] });
+        dps2.push({ x: new Date(data["recorded_time"]), y: data["tweet_count"] });
+        dps3.push({ x: new Date(data["recorded_time"]), y: data["close"] });
+      });
+
+      isLoading.value = false
+    })
+}
+
+let addSymbols = (e) => {
+        var suffixes = ["", "K", "M", "B"];
+        var order = Math.max(Math.floor(Math.log(Math.abs(e.value)) / Math.log(1000)), 0);
+        if (order > suffixes.length - 1) order = suffixes.length - 1;
+        var suffix = suffixes[order];
+        return CanvasJS.formatNumber(e.value / Math.pow(1000, order)) + suffix;
+      }
+let options = {
           theme: "light2",
           exportEnabled: true,
           title: {
@@ -64,7 +83,7 @@ import {
             },
             axisY: {
               prefix: "$",
-              labelFormatter: this.addSymbols
+              labelFormatter: addSymbols
             },
             legend: {
               verticalAlign: "top"
@@ -81,11 +100,35 @@ import {
               dataPoints: dps3
             }],
             slider: {
-              minimum: new Date(2018, 6, 1),
-              maximum: new Date(2018, 8, 1)
+              minimum: new Date(2023, 1, 8),
+              maximum: new Date(2024, 1, 10)
             }
           }
-        },
+        }
+</script>
+
+<template>
+  <div v-if="isLoading == true">
+    <Skeleton />
+</div>
+<div v-if="isLoading == false">
+  <div style="display: flex; flex-direction: row; align-items: center; justify-content: end; margin-bottom: 25px;">
+    <Input type="text" v-model:value="this.pair" placeholder="Search" style="width: 200px; margin-right: 10px;"></Input>
+    <Button @click="getChart(this.pair)">Submit</Button>
+  </div>
+  <CanvasJSStockChart :options="options" :style="this.styleOptions" />
+</div>
+</template>
+
+<script>
+  import btcData from "../assets/btcusd2018.json";
+  
+  export default {
+    data() {
+      
+      return {
+        chart: null,
+        pair: '',
         styleOptions: {
           width: "100%",
           height: "420px"
@@ -93,13 +136,7 @@ import {
       }
     },
     methods: {
-      addSymbols(e) {
-        var suffixes = ["", "K", "M", "B"];
-        var order = Math.max(Math.floor(Math.log(Math.abs(e.value)) / Math.log(1000)), 0);
-        if (order > suffixes.length - 1) order = suffixes.length - 1;
-        var suffix = suffixes[order];
-        return CanvasJS.formatNumber(e.value / Math.pow(1000, order)) + suffix;
-      }
+
     }
   }
 </script>

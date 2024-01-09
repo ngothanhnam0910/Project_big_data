@@ -1,10 +1,11 @@
 from cassandra.cluster import Cluster
 
-cluster = Cluster(['172.20.0.15'])
+
+cluster = Cluster(['127.0.0.1'])
 session = cluster.connect()
 
-# session.execute("CREATE KEYSPACE coinhub\
-#     WITH replication = {'class':'SimpleStrategy', 'replication_factor' : 3}")
+session.execute("CREATE KEYSPACE coinhub\
+    WITH replication = {'class':'SimpleStrategy', 'replication_factor' : 3}")
 
 session.execute("USE coinhub")
 

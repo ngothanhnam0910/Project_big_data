@@ -1,32 +1,52 @@
 <!-- App.vue -->
 <script setup>
-import {Row, Col, Card, Button, Input} from 'ant-design-vue';
-import {
-    UserOutlined, MenuFoldOutlined, MenuUnfoldOutlined
-    
-} from '@ant-design/icons-vue';
-</script>
-<template>
-  <div style="display: flex; flex-direction: row; align-items: center; justify-content: end; margin-bottom: 25px;">
-    <Input type="text" v-model="this.pair" placeholder="Search" style="width: 200px; margin-right: 10px;"></Input>
-    <Button>Submit</Button>
-  </div>
-  <CanvasJSStockChart :options="this.options" :style="this.styleOptions" />
-</template>
+import {Row, Col, Card, Button, Input, Skeleton} from 'ant-design-vue';
+import axios from 'axios';
+import { ref } from 'vue';
+import CanvasJS from '@canvasjs/stockcharts';
 
-<script>
-import msftData from "../assets/msft2020.json";
-  export default {
-    data() {
-      var dps1 = [], dps2 = [];
-      msftData.forEach(data => {
-        dps1.push({ x: new Date(data["date"]), y: [data["open"], data["high"], data["low"], data["close"]] });
-        dps2.push({ x: new Date(data["date"]), y: data["close"] });
+let isLoading = ref(true);
+let frequency = 'minute';
+let symbol = 'SNS';
+var dps1 = [], dps2 = [];
+
+
+axios.get(`http://localhost:5000/get_symbol_tweets/${symbol}?frequency=${frequency}`)
+    .then(response => {
+      console.log(response);
+      response.data.tweets.forEach(data => {
+        dps1.push({ x: new Date(data["recorded_time"]), y: data["tweet_count"] });
+        dps2.push({ x: new Date(data["recorded_time"]), y: data["sentiment"] });
       });
-      return {
-        chart: null,
-        pair: '',
-        options: {
+
+      isLoading.value = false
+    })
+
+let  getCorrelation = async (pairs) => {
+  console.log(pairs.toUpperCase());
+  isLoading.value = true; 
+  await axios.get(`http://localhost:5000/get_symbol_tweets/${pairs.toUpperCase()}?frequency=${frequency}`)
+    .then(response => {
+      dps1 = [];
+      dps2 = [];
+      response.data.tweets.forEach(data => {
+        dps1.push({ x: new Date(data["recorded_time"]), y: data["tweet_count"] });
+        dps2.push({ x: new Date(data["recorded_time"]), y: data["sentiment"] });
+      });
+
+      isLoading.value = false
+    })
+}
+
+let addSymbols = (e) => {
+        var suffixes = ["", "K", "M", "B"];
+        var order = Math.max(Math.floor(Math.log(Math.abs(e.value)) / Math.log(1000)), 0);
+        if (order > suffixes.length - 1) order = suffixes.length - 1;
+        var suffix = suffixes[order];
+        return CanvasJS.formatNumber(e.value / Math.pow(1000, order)) + suffix;
+      }
+
+let  options = {
           exportEnabled: true,
           theme: "light2",
           title: {
@@ -42,7 +62,7 @@ import msftData from "../assets/msft2020.json";
             },
             axisY: {
               prefix: "$",
-              labelFormatter: this.addSymbols
+              labelFormatter: addSymbols
             },
             legend: {
               verticalAlign: "top"
@@ -61,7 +81,7 @@ import msftData from "../assets/msft2020.json";
             },
             axisY: {
               prefix: "$",
-              labelFormatter: this.addSymbols
+              labelFormatter: addSymbols
             },
             legend: {
               verticalAlign: "top"
@@ -79,10 +99,32 @@ import msftData from "../assets/msft2020.json";
             }],
             slider: {
               minimum: new Date(2020, 1, 1),
-              maximum: new Date(2020, 11, 1)
+              maximum: new Date(2024, 11, 1)
             }
           }
-        },
+        };
+
+</script>
+<template>
+  <div v-if="isLoading == true">
+    <Skeleton />
+</div>
+<div v-if="isLoading == false">
+  <div style="display: flex; flex-direction: row; align-items: center; justify-content: end; margin-bottom: 25px;">
+    <Input type="text" v-model:value="this.pair" placeholder="Search" style="width: 200px; margin-right: 10px;"></Input>
+    <Button @click="() => {getCorrelation(this.pair);}">Submit</Button>
+  </div>
+  <CanvasJSStockChart :options="options" :style="this.styleOptions" />
+</div>
+</template>
+
+<script>
+  export default {
+    data() {
+    
+      return {
+        chart: null,
+        pair: '',
         styleOptions: {
           width: "100%",
           height: "400px"

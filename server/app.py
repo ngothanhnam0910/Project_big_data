@@ -1,20 +1,59 @@
 from datetime import datetime, timedelta
-from flask import Flask, abort, request
+from flask import Flask, abort, request, render_template
 from flask_cors import CORS
 from cassandra.cluster import Cluster
 
-cluster = Cluster(['172.20.0.15'])
+cluster = Cluster(['127.0.0.1'])
 session = cluster.connect('coinhub')
 
 app = Flask(__name__)
 CORS(app)
 
 
+
+def query_table(table_name):
+    query = f"SELECT * FROM {table_name}"
+    result = session.execute(query)
+    return result
+
+def get_html_table(table_name, rows):
+    html_content = f"<h1>{table_name}</h1>"
+    html_content += "<table border='1'><tr>"
+
+    # Lấy tên cột từ row đầu tiên
+    columns = rows.column_names
+    for column in columns:
+        html_content += f"<th>{column.capitalize()}</th>"
+
+    html_content += "</tr>"
+
+    for row in rows:
+        html_content += "<tr>"
+        for column in columns:
+            html_content += f"<td>{getattr(row, column)}</td>"
+        html_content += "</tr>"
+
+    html_content += "</table>"
+    return html_content
+
+@app.route('/display_data', methods=['GET'])
+def display_data():
+    table_names = ['coin_data', 'tweet_trending', 'stream_tweet_trending', 'recent_tweet']
+    html_content = ""
+
+    for table_name in table_names:
+        rows = query_table(table_name)
+        html_content += get_html_table(table_name, rows)
+
+    return html_content
+
+
 @app.route('/get_overview', methods=['GET'])
 def get_overview():
     symbol_limit = request.args.get('symbol_limit') or 10
     tweet_limit = request.args.get('tweet_limit') or 10
-    start_time = (datetime.utcnow() - timedelta(minutes=30)).strftime('%Y-%m-%d %H:%M:%S.%f%z')
+    start_time = date_long = int((datetime.utcnow() - timedelta(minutes=30)).timestamp() * 1000)
+
     tweets = session.execute('select recorded_time, content from recent_tweet')
     symbols = session.execute(
         f"select symbol, sum(count) as tweet_count, sum(sentiment) as total_sentiment from stream_tweet_trending where recorded_time >= '{start_time}' and frequency = 'minute' group by symbol allow filtering")
@@ -48,16 +87,17 @@ def get_trending_symbols():
     if not start_time or not end_time:
         abort(400, 'You haven\'t entered enough start time and end time')
 
-    start_time = datetime\
-        .strptime(start_time, '%Y-%m-%dT%H:%M:%S.%f%z')\
-        .strftime('%Y-%m-%d %H:%M:%S.%f%z')
-    end_time = datetime\
-        .strptime(end_time, '%Y-%m-%dT%H:%M:%S.%f%z')\
-        .strftime('%Y-%m-%d %H:%M:%S.%f%z')
+    # start_time = datetime\
+    #     .strptime(start_time, '%Y-%m-%dT%H:%M:%S.%f%z')\
+    #     .strftime('%Y-%m-%d %H:%M:%S.%f%z')
+    # end_time = datetime\
+    #     .strptime(end_time, '%Y-%m-%dT%H:%M:%S.%f%z')\
+    #     .strftime('%Y-%m-%d %H:%M:%S.%f%z')
+
     # In real scenario this should take from tweet_trending table
     symbols = session.execute(
         f"select symbol, sum(count) as tweet_count, sum(sentiment) as total_sentiment from stream_tweet_trending where recorded_time >= '{start_time}' and recorded_time <= '{end_time}' and frequency = 'minute' group by symbol allow filtering")
-
+    
     result = {'symbols': []}
     for symbol in symbols:
         color = "#5C5CFF"  # blue
@@ -83,11 +123,15 @@ def get_symbol_tweets(symbol):
 
     # In real scenario this should take from tweet_trending table
     tweets = session.execute(
-        f"select recorded_time, count, sentiment from stream_tweet_trending where symbol = '{symbol.lower()}' and frequency = '{frequency}' allow filtering")
+        f"select recorded_time, count, sentiment from stream_tweet_trending where symbol = '{symbol}' and frequency = '{frequency}' allow filtering")
+    if not tweets:
+        abort(404, symbol)
+
     result = {'tweets': []}
     for tweet in tweets:
         result['tweets'].append(
-            {'recorded_time': tweet.recorded_time,
+            {
+            'recorded_time': tweet.recorded_time,
              'tweet_count': tweet.count,
              'sentiment': tweet.sentiment})
     result['tweets'] = sorted(result['tweets'], key=lambda t: t['recorded_time'])
@@ -101,7 +145,7 @@ def get_symbol_correlation(symbol):
         abort(400, 'You haven\'t entered frequency')
 
     tweets = session.execute(
-        f"select recorded_time, count from stream_tweet_trending where symbol = '{symbol.lower()}' and frequency = '{frequency}' allow filtering")
+        f"select recorded_time, count from stream_tweet_trending where symbol = '{symbol}' and frequency = '{frequency}' allow filtering")
     symbols = session.execute(
         f"select recorded_time, high, low, open, close, volume from coin_data where symbol = '{symbol}' and frequency = '{frequency}' allow filtering")
 

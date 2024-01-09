@@ -1,73 +1,98 @@
 <script setup>
-import {Row, Col, Card, RangePicker} from 'ant-design-vue';
+import {Row, Col, Card, RangePicker, Skeleton} from 'ant-design-vue';
 import {
     UserOutlined, MenuFoldOutlined, MenuUnfoldOutlined
     
 } from '@ant-design/icons-vue';
-</script>
-<template>
-    <Row>
-    <Col :span="17">
-      <CanvasJSChart :options="this.options"/>
-    </Col>
-    <Col :span="7">
-      <div  style="height: 65vh; overflow-y: auto;">
-        <div style="margin-bottom: 15px;">
-          <RangePicker v-model:value="value1"  show-time />
-        </div>
-        <div v-for="twitter in this.twitterNews" >
-          <Card :title="twitter.author" :bordered="false" style="width: 300px; margin-bottom: 15px; background-color:azure">
-            {{ twitter.description }}
-          </Card>
-        </div>
-      </div> 
-    </Col>
-  </Row>
-</template>
 
-<script>
+import axios from 'axios';
 import { ref } from 'vue';
 const value1 = ref();
+let last10Twitter = [];
+let topPair = [];
+let isLoading = ref(true);
+axios.get(`http://localhost:5000/get_overview`)
+    .then(response => {
+      response.data.symbols.forEach(item => {
+        topPair.push({label: item.symbol, y: item.tweet_count})
+      });
 
-export default {
-  data() {
-    return {
-      chart: null,
-      options: {
+
+      last10Twitter = response.data.tweets;
+      isLoading.value = false
+    })
+
+let getByRange = async (starttime, endtime)=> {
+  console.log(value1);
+  if (value1) {
+
+    await axios.get(`http://localhost:5000/get_trending_symbols?startTime=${starttime}&endTime=${endtime}`)
+    .then(response => {
+      console.log(response);
+      topPair = [];
+
+      response.data.symbols.forEach(item => {
+        topPair.push({label: item.symbol, y: item.tweet_count})
+      });
+
+
+    })
+  }
+};
+
+let  options = {
         animationEnabled: true,
         exportEnabled: true,
         title:{
-          text: "Top Trending Coins over a period of time."
+           text: value1?"Top Trending Coins in last 10 minutes.": `Top Trending Coins in ${value1[0]}-${value1[1]}.`
         },
         axisX: {
           labelTextAlign: "right"
         },
         axisY: {
-          title: "in Million Tonnes per Year",
-          suffix: "M"
+          title: "Tweet count",
+          suffix: ""
         },
         data: [{
           type: "bar",
-          yValueFormatString: "#,###M tonnes",
-          dataPoints: [
-            { label: "Industrial Machinery", y: 3 },
-            { label: "Electrical/Electronic", y: 18 },
-            { label: "Transportation", y: 27 },
-            { label: "Consumer & Institutional Products", y: 42 },
-            { label: "Other sectors", y: 47 },
-            { label: "Textiles", y: 59 },
-            { label: "Building and Construction", y: 65 },
-            { label: "Packaging", y: 146 }
-          ]
+          yValueFormatString: "#,### tweets",
+          dataPoints: topPair
         }]
-      },
-      twitterNews: [
-        {author: 'manbo', description: 'how to do that #ccc'},
-        {author: 'manbo', description: 'how to do that #ccc'},
-        {author: 'manbo', description: 'how to do that #ccc'},
-        {author: 'manbo', description: 'how to do that #ccc'},
-        {author: 'manbo', description: 'how to do that #ccc'},
-      ]
+      }
+</script>
+<template>
+<div v-if="isLoading == true">
+    <Skeleton />
+</div>
+<div v-if="isLoading == false">
+    <Row>
+    <Col :span="17">
+      <CanvasJSChart :options="options"/>
+    </Col>
+    <Col :span="7">
+      <div  style="height: 65vh; overflow-y: auto;">
+        <div style="margin-bottom: 15px;">
+          <RangePicker v-model:value="value1"  show-time/>
+          <Button @click="getByRange(value1[0].toISOString(), value1[1].toISOString())">Submit</Button>
+        </div>
+        <div v-for="twitter in last10Twitter" >
+          <Card :title="twitter.recorded_time" :bordered="false" style="width: 300px; margin-bottom: 15px; background-color:azure">
+            {{ twitter.content }}
+          </Card>
+        </div>
+      </div> 
+    </Col>
+  </Row>
+</div>
+</template>
+
+<script>
+
+
+export default {
+  data() {
+    return {
+      chart: null,
     }
   }
 }
