@@ -15,6 +15,7 @@ Cài Nodejs
 Cài cassandra driver: Pip install cassandra-driver
 
 2. Chạy cassandra:
+Start cassandra:
 https://phoenixnap.com/kb/install-cassandra-on-windows
 
 Chạy cassandra/create_model.py
