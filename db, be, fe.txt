@@ -1,3 +1,5 @@
+Note: Tên symbol: viết hoa. Code backend, frontend viết theo model trong cassandra/create_model.py
+---------------------------------------------------
 1. Cài đặt môi trường
 Cài Java bản SE Runtime Environment 8u251
 https://www.oracle.com/java/technologies/javase/javase8u211-later-archive-downloads.html
@@ -15,7 +17,7 @@ Cài cassandra driver: Pip install cassandra-driver
 2. Chạy cassandra:
 https://phoenixnap.com/kb/install-cassandra-on-windows
 
-Chạy cassandra/create_model.py để tạo bộ khung cơ bản dữ liệu trên cassandra
+Chạy cassandra/create_model.py
 
 3. Chạy server:
 chạy server/app.py
