@@ -11,14 +11,12 @@
   - B 4.3:  python apps/kafka/coin_consumer/consumer.py   (Dữ liệu được lấy từ kafka và đẩy vào HDFS)
 
 # Running the code (Spark on Hadoop Yarn cluster)
-Before running, check the virtual disk size that Docker
-assigns to the container. In my case, I needed to assign
-some 70 GB.
+
 You can run Spark on the Hadoop Yarn cluster by running:
 ```shell
 make run-yarn
 ```
-or with 3 data nodes:
+or with 2 data nodes:
 ```shell
 make run-yarn-scaled
 ```
